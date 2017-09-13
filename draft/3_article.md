@@ -54,28 +54,29 @@ Author's identity is represented by a pair of
 For security reasons only the hash of the public key is published on Blockchain to
 verify the author's identity.
 
-*TODO:* Detailed asymmetric cryptography and hash algorithm and
-their versions must be provided.
+The algorithm used to create the key pair is [RSA](https://en.wikipedia.org/wiki/RSA_(cryptosystem)).
+Key length should be longer than 2048 bit.
+
+The creator_id is an [SHA1](https://en.wikipedia.org/wiki/SHA-1) hash of the public key generated.
+The hash should be encoded in [Base36](https://en.wikipedia.org/wiki/Base36) format.
 
 #### content_hash
 
 Fingerprint represented by the hash of the content.
 
-*TODO:* Detailed hash algorithm and version must be provided.
+The content_hash is an [SHA1](https://en.wikipedia.org/wiki/SHA-1) hash of the public key generated.
+The hash should be encoded in hex digits.
 
 #### signature
 
 Signature is calculated by representing all the DTCP data in a
 [JSON](http://www.json.org) string,
-except the signature field itself, and sign it with author's private key.
+except the signature field itself, calculate the [SHA1](https://en.wikipedia.org/wiki/SHA-1)
+hash of the JSON string, and then sign the hash with private key.
 
 The fields in the JSON array must be sorted alphabetically before signing. 
 
-Signature algorithm is recorded in the following field:
-
-#### signature_algorithm
-
-The algorithm used in signature.
+Signature algorithm used is [RSA](https://en.wikipedia.org/wiki/RSA_(cryptosystem)).
 
 #### similarity_score
 
@@ -85,4 +86,40 @@ It is used to get the estimated similarity between two articles quickly.
 With the similarity index built from scores of a large set of articles,
 we can identify similar articles in the set to a given article in a very short time.
 
-*TODO:* Detailed algorithm description.
+MinHash algorithm utilizes an array of hash functions (or permutation functions).
+In DTCP we choose 126 hash functions, and hashing them into 9 components,
+which makes our similarity score a 9 dimensional vector.
+
+The selection of permutation functions are not fixed, however,
+for best performance it is better selected according to some rules like [Universal Hashing](http://en.wikipedia.org/wiki/Universal_hashing).
+
+There's another fixed hash function to produce the hash component.
+The packing algorithm, together with the parameters used, are given in the following python codes:
+
+```python
+
+    # digests are 126 numbers from the MinHash algorithm
+    
+    b = 9
+    r = 14
+
+    hashes = []
+
+    large_prime = int(18446744073709551557)
+
+    for i in range(0, b):
+
+        hs = int(0)
+
+        for j in range(0, r):
+            current = int(digests[i * r + j])
+            hs += current * int(7 ** j)
+            hs %= large_prime
+
+        hashes.append(hs)
+
+    return hashes
+    
+    # we got 9 hash components here in the hashes list
+
+```
